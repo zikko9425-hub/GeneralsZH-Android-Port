@@ -78,18 +78,18 @@ final class SupportLinks {
     static SupportLinks load(Context ctx) {
         File file = new File(UpdateManager.updateDir(ctx), FILE_NAME);
         try {
-            // WARU Edition ships a safe bundled default so the Support/Donate card is
-            // available on a fresh install. Verified remote support.json still takes
-            // precedence when the updater has downloaded one.
-            String json;
+            JSONObject root;
             if (file.isFile()) {
-                json = readText(file);
+                root = new JSONObject(readText(file));
             } else {
                 try (InputStream in = ctx.getAssets().open(FILE_NAME)) {
-                    json = new String(readAll(in), StandardCharsets.UTF_8);
+                    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    root = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
                 }
             }
-            JSONObject root = new JSONObject(json);
             Locale locale = launcherLocale(ctx);
             JSONObject text = root.optJSONObject("text");
             if (text == null) {
@@ -193,16 +193,6 @@ final class SupportLinks {
             return ctx.getResources().getConfiguration().getLocales().get(0);
         }
         return ctx.getResources().getConfiguration().locale;
-    }
-
-    private static byte[] readAll(InputStream in) throws IOException {
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-        byte[] buf = new byte[4096];
-        int n;
-        while ((n = in.read(buf)) != -1) {
-            out.write(buf, 0, n);
-        }
-        return out.toByteArray();
     }
 
     private static String readText(File file) throws IOException {
