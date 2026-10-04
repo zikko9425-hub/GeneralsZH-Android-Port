@@ -74,47 +74,23 @@ final class SupportLinks {
         this.entries = entries;
     }
 
-    /** The card's content in the launcher's language, or null when there is nothing to show. */
+    /**
+     * WARU Edition: keep the support card independent from the remote update cache.
+     *
+     * The upstream launcher keeps the last verified support.json when an update cannot be
+     * fetched. That can leave an old donation list (Boosty/USDT) on a device after the repository
+     * file has changed. This fork intentionally exposes exactly one contact method locally.
+     */
     static SupportLinks load(Context ctx) {
-        File file = new File(UpdateManager.updateDir(ctx), FILE_NAME);
-        if (!file.isFile()) {
-            return null;
-        }
-        try {
-            JSONObject root = new JSONObject(readText(file));
-            Locale locale = launcherLocale(ctx);
-            JSONObject text = root.optJSONObject("text");
-            if (text == null) {
-                text = new JSONObject();
-            }
-            List<Entry> entries = new ArrayList<>();
-            JSONArray list = root.optJSONArray("entries");
-            for (int i = 0; list != null && i < list.length(); i++) {
-                JSONObject e = list.optJSONObject(i);
-                if (e == null) {
-                    continue;
-                }
-                Object labelObj = e.opt("label");
-                String label = labelObj instanceof JSONObject
-                    ? pick(strings((JSONObject) labelObj), locale)
-                    : e.optString("label", "").trim();
-                String value = e.optString("value", "").trim();
-                if (usable(label, value)) {
-                    entries.add(new Entry(label, value));
-                }
-            }
-            String title = field(text, locale, "title");
-            if (entries.isEmpty() || title.isEmpty()) {
-                return null;
-            }
-            return new SupportLinks(title, field(text, locale, "body"), field(text, locale, "warning"),
-                field(text, locale, "copy_hint"), field(text, locale, "copied"), entries);
-        } catch (Exception e) {
-            // A malformed file is published by mistake, not by an attacker (it matched the signed
-            // manifest); showing no card is the safe reading of it.
-            android.util.Log.w("GXSupport", "support.json unreadable", e);
-            return null;
-        }
+        Locale locale = launcherLocale(ctx);
+        boolean russian = "ru".equalsIgnoreCase(locale.getLanguage());
+        String title = russian ? "Поддержать WARU Edition" : "Support WARU Edition";
+        String body = russian
+            ? "Поддержать проект и связаться с Generals Mobile можно через Telegram."
+            : "Support the project and contact Generals Mobile through Telegram.";
+        List<Entry> entries = new ArrayList<>();
+        entries.add(new Entry("Telegram — Generals Mobile", "https://t.me/generalsmobile1"));
+        return new SupportLinks(title, body, "", "", "", entries);
     }
 
     // An entry without a label or value, with whitespace in the value, or with a link that is not
